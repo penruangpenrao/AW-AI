@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoWord AI — ระบบจัดการเอกสารอัจฉริยะ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --glass-shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Kanit', 'Inter', sans-serif;
+            background-color: #0f0f1a;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* ---- Animated background blobs ---- */
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.35;
+            animation: floatBlob 8s ease-in-out infinite alternate;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .blob-1 {
+            width: 520px;
+            height: 520px;
+            background: radial-gradient(circle, #7c3aed, #4f46e5);
+            top: -120px;
+            left: -120px;
+            animation-delay: 0s;
+        }
+
+        .blob-2 {
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, #2563eb, #0891b2);
+            top: 30%;
+            right: -100px;
+            animation-delay: 2s;
+        }
+
+        .blob-3 {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, #7c3aed, #db2777);
+            bottom: -80px;
+            left: 30%;
+            animation-delay: 4s;
+        }
+
+        @keyframes floatBlob {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            100% {
+                transform: translate(30px, 40px) scale(1.08);
+            }
+        }
+
+        /* ---- Glass card ---- */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(160%);
+            -webkit-backdrop-filter: blur(24px) saturate(160%);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 8px 40px var(--glass-shadow);
+        }
+
+        /* ---- Upload zone ---- */
+        .upload-zone {
+            background: rgba(255, 255, 255, 0.04);
+            border: 2px dashed rgba(167, 139, 250, 0.5);
+            border-radius: 18px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            background: rgba(167, 139, 250, 0.15);
+            border-color: rgba(167, 139, 250, 0.9);
+            transform: translateY(-2px);
+        }
+
+        /* ---- Buttons ---- */
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            border: none;
+            border-radius: 14px;
+            color: #fff;
+            font-weight: 600;
+            padding: 14px 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(124, 58, 237, 0.5);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ---- Table Inputs ---- */
+        .table-input {
+            width: 100%;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            padding: 6px 8px;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .table-input:focus {
+            border-color: #a78bfa;
+            background: rgba(167, 139, 250, 0.1);
+            outline: none;
+        }
+
+        .header-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #c4b5fd;
+            font-weight: 600;
+            outline: none;
+            text-align: center;
+        }
+
+        /* ---- Scrollbar & Utils ---- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(167, 139, 250, 0.4);
+            border-radius: 10px;
+        }
+
+        .fade-in {
+            animation: fadeSlideUp 0.5s ease forwards;
+        }
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="relative z-10 min-h-screen flex flex-col items-center justify-start py-12 px-4">
+        <div class="text-center mb-10 fade-in">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+                style="background: linear-gradient(135deg,#7c3aed,#4f46e5); box-shadow: 0 8px 24px rgba(124,58,237,0.5);">
+                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold text-white mb-2">AutoWord AI</h1>
+            <p class="text-slate-400 text-sm font-light">ระบบเติมคำและอัปเดตเอกสารด้วยพลัง AI</p>
+        </div>
+
+        <div class="glass-card w-full max-w-4xl p-8 fade-in" style="animation-delay: 0.1s;">
+
+            <div id="uploadZone" class="upload-zone p-10 text-center mb-6">
+                <input type="file" id="fileInput" accept=".docx" multiple class="hidden">
+                <svg class="mx-auto h-14 w-14 text-violet-400 mb-4 drop-shadow-lg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                </svg>
+                <p class="text-base font-medium text-slate-200 mb-1">ลากไฟล์มาวางที่นี่ หรือ <span
+                        class="text-violet-400 underline cursor-pointer">คลิกเพื่อเลือกไฟล์</span></p>
+                <p id="fileNameDisplay" class="text-xs text-slate-500 mt-2">อัปโหลดไฟล์ .docx ได้หลายไฟล์พร้อมกัน</p>
+            </div>
+
+            <div id="tableZone" class="hidden fade-in">
+                <div
+                    class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4 text-blue-200 text-sm flex items-center gap-2">
+                    💡 คุณสามารถเปลี่ยนชื่อหัวตารางสีม่วง ให้ตรงกับเนื้อหาในเอกสารของคุณได้เลย AI จะนำไปจับคู่ให้เอง
+                </div>
+
+                <div class="overflow-x-auto bg-white/5 border border-white/10 rounded-xl mb-6">
+                    <table class="w-full text-left text-sm whitespace-nowrap" id="excelTable">
+                        <thead class="bg-white/10 border-b border-white/10">
+                            <tr>
+                                <th class="p-2 w-10 text-center text-slate-400">#</th>
+                                <th class="p-2"><input type="text" value="เดือน" class="header-input"></th>
+                                <th class="p-2"><input type="text" value="วันที่" class="header-input"></th>
+                                <th class="p-2"><input type="text" value="เลขที่ฎีกา" class="header-input"></th>
+                                <th class="p-2"><input type="text" value="จำนวนเงิน" class="header-input"></th>
+                                <th class="p-2"><input type="text" value="รายการ" class="header-input text-left"
+                                        style="text-align: left;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                <td class="p-2 text-center text-slate-500 font-mono text-xs">1</td>
+                                <td class="p-2"><input type="text" placeholder="ก.พ." class="table-input"></td>
+                                <td class="p-2"><input type="text" placeholder="2" class="table-input"></td>
+                                <td class="p-2"><input type="text" placeholder="45/2569" class="table-input"></td>
+                                <td class="p-2"><input type="text" placeholder="21,450.00" class="table-input"></td>
+                                <td class="p-2"><input type="text" placeholder="ค่าตอบแทนนอกเวลา..."
+                                        class="table-input"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex justify-between items-center mb-6">
+                    <button type="button" id="addRowBtn" class="btn-secondary flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        เพิ่มแถวข้อมูล
+                    </button>
+                    <span id="fileCountBadge"
+                        class="text-sm text-emerald-400 font-medium bg-emerald-400/10 px-3 py-1 rounded-full"></span>
+                </div>
+
+                <button type="button" id="submitBtn" class="btn-primary flex justify-center items-center gap-2">
+                    <span id="btnText">✨ ประมวลผลด้วย AI และสร้างเอกสาร</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. จัดการ UI และตัวแปรพื้นฐาน ---
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const tableZone = document.getElementById('tableZone');
+        const tableBody = document.getElementById('tableBody');
+        const addRowBtn = document.getElementById('addRowBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const fileCountBadge = document.getElementById('fileCountBadge');
+
+        let selectedFiles = []; // เก็บไฟล์ที่อัปโหลดทั้งหมด
+
+        // --- 2. ระบบ Drag & Drop อัปโหลดไฟล์ ---
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            const validFiles = Array.from(files).filter(file => file.name.endsWith('.docx'));
+
+            if (validFiles.length === 0) {
+                showToast('กรุณาเลือกไฟล์ .docx เท่านั้น', '#ef4444');
+                return;
+            }
+
+            // 🌟 ส่วนที่แก้ใหม่: เช็คไฟล์ซ้ำ และนำไฟล์ใหม่ไปต่อท้ายไฟล์เดิม 
+            const newFiles = validFiles.filter(newFile =>
+                !selectedFiles.some(existingFile => existingFile.name === newFile.name)
+            );
+            selectedFiles = [...selectedFiles, ...newFiles]; // นำมาต่อท้ายกัน
+
+            fileNameDisplay.textContent = `เลือกแล้ว ${selectedFiles.length} ไฟล์`;
+            fileCountBadge.textContent = `เตรียมอัปเดต ${selectedFiles.length} ไฟล์`;
+            tableZone.classList.remove('hidden');
+            showToast(`เพิ่มไฟล์สำเร็จ รวมเป็น ${selectedFiles.length} ไฟล์`, '#34d399');
+        }
+        // --- 3. ระบบจัดการตาราง (เพิ่มแถว) ---
+        let rowCount = 1;
+        addRowBtn.addEventListener('click', () => {
+            rowCount++;
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
+            tr.innerHTML = `
+                <td class="p-2 text-center text-slate-500 font-mono text-xs">${rowCount}</td>
+                <td class="p-2"><input type="text" class="table-input"></td>
+                <td class="p-2"><input type="text" class="table-input"></td>
+                <td class="p-2"><input type="text" class="table-input"></td>
+                <td class="p-2"><input type="text" class="table-input"></td>
+                <td class="p-2"><input type="text" class="table-input"></td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        // --- 4. ฟังก์ชันดึงข้อมูลจากตารางไปให้ AI ---
+        function getTableData() {
+            // ดึงชื่อหัวข้อ (Headers)
+            const headers = Array.from(document.querySelectorAll('thead input')).map(inp => inp.value.trim());
+            const rowsData = [];
+
+            // ดึงข้อมูลในแต่ละแถว
+            document.querySelectorAll('tbody tr').forEach(tr => {
+                const rowObj = {};
+                let hasData = false;
+                const inputs = tr.querySelectorAll('input');
+
+                inputs.forEach((inp, index) => {
+                    const val = inp.value.trim();
+                    if (val !== '') hasData = true;
+                    rowObj[headers[index]] = val; // จับคู่ หัวข้อ : ข้อมูล
+                });
+
+                if (hasData) rowsData.push(rowObj);
+            });
+
+            return rowsData;
+        }
+
+        // --- 5. ส่งข้อมูลไปที่ Backend (รอดำเนินการใน app.py) ---
+        submitBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+
+            const tableData = getTableData();
+            if (tableData.length === 0) {
+                showToast('กรุณากรอกข้อมูลในตารางอย่างน้อย 1 แถว', '#f59e0b');
+                return;
+            }
+
+            const formData = new FormData();
+            // นำไฟล์ทั้งหมดใส่เข้าไปใน formData
+            selectedFiles.forEach(file => formData.append('files', file));
+            // นำข้อมูลจากตารางแปลงเป็น JSON ใส่เข้าไป
+            formData.append('excel_data', JSON.stringify(tableData));
+
+            btnText.innerHTML = '<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> AI กำลังทำงาน...';
+            submitBtn.disabled = true;
+
+            try {
+                // รอการเขียน API เส้นนี้ในฝั่ง Python
+                const response = await fetch('/process_ai', { method: 'POST', body: formData });
+
+                if (response.ok) {
+                    // ดาวน์โหลดไฟล์ ZIP ที่แก้แล้ว
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'เอกสารที่อัปเดตแล้ว.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+
+                    confetti({ particleCount: 160, spread: 80, origin: { y: 0.55 } });
+                    showToast('สร้างเอกสารสำเร็จ! เริ่มดาวน์โหลดไฟล์ ZIP', '#34d399');
+                } else {
+                    showToast('เกิดข้อผิดพลาดในการประมวลผล', '#ef4444');
+                }
+            } catch (error) {
+                showToast('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', '#ef4444');
+            } finally {
+                btnText.textContent = '✨ ประมวลผลด้วย AI และสร้างเอกสาร';
+                submitBtn.disabled = false;
+            }
+        });
+
+        // --- Toast Notification ---
+        function showToast(msg, color = '#a78bfa') {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = `position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px); background:rgba(15,15,26,0.92); backdrop-filter:blur(16px); border:1px solid ${color}55; border-left:4px solid ${color}; color:#f1f5f9; padding:12px 22px; border-radius:14px; font-size:0.9rem; z-index:9999; opacity:0; transition:all 0.35s ease; box-shadow:0 4px 24px ${color}33; white-space:nowrap;`;
+            document.body.appendChild(t);
+            requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)'; });
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(10px)'; setTimeout(() => t.remove(), 400); }, 3500);
+        }
+    </script>
+</body>
+
+</html>
