@@ -4,14 +4,16 @@ from docx.shared import RGBColor
 import io
 import json
 import zipfile
-import os
+import os # <--- เพิ่ม import os เพื่อใช้จัดการ Environment Variable
 import google.generativeai as genai
 
 app = Flask(__name__)
 
 # ── 1. ตั้งค่า Google Gemini API ──
 # นำ API Key ฟรีของคุณจาก Google AI Studio มาใส่ที่นี่ครับ
-GEMINI_API_KEY = "AIzaSyBhcoxnVIXRk-mLZUlqAuE3RZMQ5jxqEE0"
+# โค้ดแบบใหม่ (ปลอดภัย!)
+import os
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 # ใช้รุ่น flash เพราะทำงานไวและฟรีโควตาเยอะเหมาะกับงานเอกสาร
 model = genai.GenerativeModel('gemini-2.5-flash')# ── CORS ──
